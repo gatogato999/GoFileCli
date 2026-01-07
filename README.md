@@ -1,7 +1,7 @@
 # GoFileCli
 a go cli tool to upload and download files from and into a valkey database.
 
-# usage
+## usage
 
 - clone the repo
 ``` git clone ```
@@ -44,16 +44,17 @@ read folder from valkey database and copy them locally in different directory
 goFileCli -d dirFromDatabase destinationDir
 ```
 
-# check list of mandatory features 
+## check list of mandatory features 
 - [ x ] verify dir exists on the device
-- [ ] confirm connection with the valkey database
+- [ x ] confirm connection with the valkey database
 - [ x ] check args
-- [ ] can upload all files inside dir (skip sub-dir for now)
+- [ x ] can upload all files inside dir (skip sub-dir for now)
 - [ ] can download a dir and it's content from the database
 - [ ] if downloading to non-existent dir create it
 - [ ] permission error handling 
+- [ ] modularize the tool (insdeat of a single file)
 
-# features to consider 
+### features to consider 
 - [ ] handling sub dirs
 - [ ] handling different types of systems (path differ from other OS)
 - [ ] preserve file attributes as possible
