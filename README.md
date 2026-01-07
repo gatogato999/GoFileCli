@@ -45,18 +45,19 @@ goFileCli -d dirFromDatabase destinationDir
 ```
 
 # check list of mandatory features 
-- [] verify dir exists
-- [] confirm connection with the valkey database
+- [ x ] verify dir exists on the device
+- [ ] confirm connection with the valkey database
 - [ x ] check args
-- [] can upload all files inside dir (skip sub-dir for now)
-- [] can download a dir and it's content from the database
-- [] if downloading to non-existent dir create it
-- [] permission error handling 
+- [ ] can upload all files inside dir (skip sub-dir for now)
+- [ ] can download a dir and it's content from the database
+- [ ] if downloading to non-existent dir create it
+- [ ] permission error handling 
 
 # features to consider 
-- [] handling sub dirs
-- [] handling different types of systems (path differ from other OS)
-- [] preserve file attributes as possible
+- [ ] handling sub dirs
+- [ ] handling different types of systems (path differ from other OS)
+- [ ] preserve file attributes as possible
+- [ ] consider the override of the data in the valkey db.
 
 #### notes
  

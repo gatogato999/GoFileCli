@@ -14,6 +14,30 @@ func usageMsg() {
 	)
 }
 
+func validateDir(path string) error {
+	dirInfo, err := os.Stat(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return fmt.Errorf("path does not exist %s", path)
+		}
+		if os.IsPermission(err) {
+			return fmt.Errorf("premission error \n %s", path)
+		}
+		// other
+		return err
+	}
+	if !dirInfo.IsDir() {
+		return fmt.Errorf("this is not a dir \n %s", path)
+	}
+	// can i open it ?
+	f, err := os.Open(path)
+	if err != nil {
+		return fmt.Errorf("can't open the dir :\n %v", err)
+	}
+	f.Close()
+	return nil
+}
+
 func main() {
 	// args
 	if len(os.Args) < 2 {
@@ -30,6 +54,11 @@ func main() {
 			return
 		}
 		originDir := os.Args[2]
+		err := validateDir(originDir)
+		if err != nil {
+			fmt.Printf(" error: \n %v", err)
+			os.Exit(1)
+		}
 		// do upload
 		fmt.Printf("upload %s", originDir)
 		break
