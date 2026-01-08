@@ -114,14 +114,14 @@ func uploadDir(vlkClient *redis.Client, inputDir string, isRecursive bool) {
 			return err
 		}
 		if dir.IsDir() {
-
-			if !isRecursive && path != fullPath {
-				return filepath.SkipDir
-			}
 			return nil
 		}
+		dirPart := filepath.Dir(path)
+		fileName := filepath.Base(path)
 
-		key := strings.ReplaceAll(path, string(os.PathSeparator), "/")
+		dirPart = filepath.ToSlash(dirPart)
+
+		key := fmt.Sprintf("%s:%s", dirPart, fileName)
 
 		fileContent, err := os.ReadFile(path)
 		if err != nil {
@@ -157,37 +157,38 @@ func downloadDir(
 ) {
 	// search the database
 	pattern := valkeyDir + ":*"
+	if isRecursive {
+		pattern = valkeyDir + "*"
+	}
 	var cursor uint64
 	isFirstRun := true
 	for {
 		// scan doesn't block the db
 		// cursor used by valkey to remeber where it left off
-		keys, nextCursor, err := vlkClient.Scan(cntx, cursor, pattern, 10).Result()
-		if err != nil {
-			fmt.Printf("error scanning db : %v\n", err)
-			return
-		}
+		keys, nextCursor, _ := vlkClient.Scan(cntx, cursor, pattern, 10).Result()
 
 		if isFirstRun && len(keys) == 0 {
-			fmt.Printf("error : directory '%s' not found id valkey \n", valkeyDir)
+			fmt.Printf("error : directory '%s' not found in valkey \n", valkeyDir)
 			return
 		}
 
-		if isFirstRun {
-			if err := os.MkdirAll(destinationDir, 0o755); err != nil {
-				fmt.Printf("can't create dir %s : %v\n", destinationDir, err)
-			}
-			isFirstRun = false
-
-		}
+		isFirstRun = false
 
 		for _, key := range keys {
-			// file name
-			keyName := strings.SplitN(key, ":", 2)
-			if len(keyName) < 2 {
-				continue
+			if !isRecursive {
+				extraPath := strings.TrimPrefix(key, valkeyDir)
+				if strings.Contains(extraPath[:strings.LastIndex(extraPath, ":")], "/") {
+					continue
+				}
 			}
-			fileName := keyName[1]
+			lastColon := strings.LastIndex(key, ":")
+			dirPart := key[:lastColon]
+			fileName := key[lastColon+1:]
+
+			subDir := strings.TrimPrefix(dirPart, valkeyDir)
+			finalLocalDir := filepath.Join(destinationDir, subDir)
+
+			os.MkdirAll(finalLocalDir, 0o755)
 
 			fileContents, err := vlkClient.Get(cntx, key).Bytes()
 			if err != nil {
@@ -195,7 +196,8 @@ func downloadDir(
 				continue
 			}
 
-			destinationFile := filepath.Join(destinationDir, fileName)
+			destinationFile := filepath.Join(finalLocalDir, fileName)
+
 			err = os.WriteFile(destinationFile, fileContents, 0o644) // rw- r-- r--
 			if err != nil {
 				fmt.Printf("error : failed to write %s: %v \n ", destinationFile, err)
