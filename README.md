@@ -47,12 +47,17 @@ goFileCli -d dirFromDatabase destinationDir
 - recursive flag
 when applying the `-r` flag for either `-u` or `-d` the tool do the operation (upload or download) for the sub-dir of the specified dir.
 ``` bash 
+# -r can be any where
 # in normal upload mode 
 goFileCli -u originDir # will skip the sub-dir inside of 'origindir'
 # using -r flag 
 goFileCli -u originDir -r # will upload the direct files and sub-dir's files
 # origindir:directFile.txt 
 # originDir/subDir:directFile.txt
+goFileCli -d originDir dist # originDir has sub dir 
+# only direct files in originDir will be inside dist
+goFileCli -d origindir dist -r
+# all files and sub dirs in origindir will be in dist (full copy)
 ```
 
 ## check list of mandatory features 
@@ -62,15 +67,15 @@ goFileCli -u originDir -r # will upload the direct files and sub-dir's files
 - [x] can upload all files inside dir (skip sub-dir for now)
 - [x] can download a dir and it's content from the database
 - [x] if downloading to non-existent dir create it
-- [ ] add a `-r` flag that imply recursive operations of subDirs.
+- [x] add a `-r` flag that imply recursive operations of subDirs.
 - [ ] permission error handling 
 - [ ] modularize the tool (insdeat of a single file)
 - [ ] refactor the error handling (too many `if != err`)
 
 ### things to consider 
 - [ ] the override of the data if the given input is the same.
-- [ ] handling sub dirs
-- [ ] handling different types of systems (path differ from other OS)
+- [x] handling sub dirs
+- [x] handling different types of systems (path differ from other OS)
 - [ ] preserve file attributes as possible
 
 #### notes
