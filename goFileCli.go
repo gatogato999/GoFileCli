@@ -46,25 +46,38 @@ func validateDir(path string) error {
 var cntx = context.Background()
 
 func main() {
-	// args
-	if len(os.Args) < 2 {
+	// check the -r flag and then rmove it from the args array
+	// isRecursive := false
+
+	toolArgs := os.Args[1:]
+	if len(toolArgs) < 1 {
 		usageMsg()
 		return
 	}
-	vlkClient := redis.NewClient(&redis.Options{
-		Addr:     "localhost:6379",
-		Password: "",
-		DB:       0,
-	})
-	switch os.Args[1] {
+
+	isRecursive := false
+	for index, arg := range toolArgs {
+		if arg == "-r" {
+			isRecursive = true
+			toolArgs = append(toolArgs[:index], toolArgs[index+1:]...)
+			break
+		}
+	}
+	fmt.Println(isRecursive)
+	// vlkClient := redis.NewClient(&redis.Options{
+	// 	Addr:     "localhost:6379",
+	// 	Password: "",
+	// 	DB:       0,
+	// })
+	switch toolArgs[0] {
 	case "-h", "--help":
 		usageMsg()
 	case "-u":
-		if len(os.Args) < 3 {
+		if len(toolArgs) < 2 {
 			fmt.Printf(" -u need the directory name parm\n")
 			return
 		}
-		originDir := os.Args[2]
+		originDir := toolArgs[1]
 		err := validateDir(originDir)
 		if err != nil {
 			fmt.Printf(" error: \n %v\n", err)
@@ -72,17 +85,17 @@ func main() {
 		}
 		// do upload
 		fmt.Printf("uploading %s\n", originDir)
-		uploadDir(vlkClient, originDir)
+		// uploadDir(vlkClient, originDir)
 	case "-d":
-		if len(os.Args) < 4 {
+		if len(toolArgs) < 3 {
 			fmt.Printf(" -d need used with 2 parm : originDir distDir\n")
 			return
 		}
-		valkeyDir := os.Args[2]
-		destinationDir := os.Args[3]
+		valkeyDir := toolArgs[1]
+		destinationDir := toolArgs[2]
 		// do download
 		fmt.Printf("downloading from %s to %s\n", valkeyDir, destinationDir)
-		downloadDir(vlkClient, valkeyDir, destinationDir)
+		// downloadDir(vlkClient, valkeyDir, destinationDir)
 	default:
 		usageMsg()
 	}
