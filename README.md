@@ -44,6 +44,17 @@ read folder from valkey database and copy them locally in different directory
 goFileCli -d dirFromDatabase destinationDir
 ```
 
+- recursive flag
+when applying the `-r` flag for either `-u` or `-d` the tool do the operation (upload or download) for the sub-dir of the specified dir.
+``` bash 
+# in normal upload mode 
+goFileCli -u originDir # will skip the sub-dir inside of 'origindir'
+# using -r flag 
+goFileCli -u originDir -r # will upload the direct files and sub-dir's files
+# origindir:directFile.txt 
+# originDir/subDir:directFile.txt
+```
+
 ## check list of mandatory features 
 - [x] verify dir exists on the device
 - [x] confirm connection with the valkey database
@@ -51,6 +62,7 @@ goFileCli -d dirFromDatabase destinationDir
 - [x] can upload all files inside dir (skip sub-dir for now)
 - [x] can download a dir and it's content from the database
 - [x] if downloading to non-existent dir create it
+- [ ] add a `-r` flag that imply recursive operations of subDirs.
 - [ ] permission error handling 
 - [ ] modularize the tool (insdeat of a single file)
 - [ ] refactor the error handling (too many `if != err`)

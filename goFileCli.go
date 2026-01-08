@@ -46,25 +46,38 @@ func validateDir(path string) error {
 var cntx = context.Background()
 
 func main() {
-	// args
-	if len(os.Args) < 2 {
+	// check the -r flag and then rmove it from the args array
+	// isRecursive := false
+
+	toolArgs := os.Args[1:]
+	if len(toolArgs) < 1 {
 		usageMsg()
 		return
 	}
+
+	isRecursive := false
+	for index, arg := range toolArgs {
+		if arg == "-r" {
+			isRecursive = true
+			toolArgs = append(toolArgs[:index], toolArgs[index+1:]...)
+			break
+		}
+	}
+	fmt.Println(isRecursive)
 	vlkClient := redis.NewClient(&redis.Options{
 		Addr:     "localhost:6379",
 		Password: "",
 		DB:       0,
 	})
-	switch os.Args[1] {
+	switch toolArgs[0] {
 	case "-h", "--help":
 		usageMsg()
 	case "-u":
-		if len(os.Args) < 3 {
+		if len(toolArgs) < 2 {
 			fmt.Printf(" -u need the directory name parm\n")
 			return
 		}
-		originDir := os.Args[2]
+		originDir := toolArgs[1]
 		err := validateDir(originDir)
 		if err != nil {
 			fmt.Printf(" error: \n %v\n", err)
@@ -72,61 +85,76 @@ func main() {
 		}
 		// do upload
 		fmt.Printf("uploading %s\n", originDir)
-		uploadDir(vlkClient, originDir)
+		uploadDir(vlkClient, originDir, isRecursive)
 	case "-d":
-		if len(os.Args) < 4 {
+		if len(toolArgs) < 3 {
 			fmt.Printf(" -d need used with 2 parm : originDir distDir\n")
 			return
 		}
-		valkeyDir := os.Args[2]
-		destinationDir := os.Args[3]
+		valkeyDir := toolArgs[1]
+		destinationDir := toolArgs[2]
 		// do download
 		fmt.Printf("downloading from %s to %s\n", valkeyDir, destinationDir)
-		downloadDir(vlkClient, valkeyDir, destinationDir)
+		downloadDir(vlkClient, valkeyDir, destinationDir, isRecursive)
 	default:
 		usageMsg()
 	}
 }
 
-func uploadDir(vlkClient *redis.Client, dirPath string) {
-	fullPath, err := filepath.Abs(dirPath)
-	if err != nil {
-		fmt.Printf("can't get the abs path : %s\n", err)
-	}
-	dirName := filepath.Base(fullPath)
-
-	entries, err := os.ReadDir(fullPath)
-	if err != nil {
-		fmt.Printf("error reading dir : %v\n", err)
+func uploadDir(vlkClient *redis.Client, inputDir string, isRecursive bool) {
+	fullPath := filepath.Clean(inputDir)
+	info, err := os.Stat(fullPath)
+	if err != nil || !info.IsDir() {
+		fmt.Printf("error : %s is not a dir\n", fullPath)
 		return
 	}
+	// process all files
+	processFile := func(path string, dir os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if dir.IsDir() {
 
-	for _, entry := range entries {
-		if !entry.IsDir() {
-			filepath := filepath.Join(fullPath, entry.Name())
-			fileContent, err := os.ReadFile(filepath)
-			if err != nil {
-				fmt.Printf("can't read file %s: %v\n", entry.Name(), err)
-				continue
+			if !isRecursive && path != fullPath {
+				return filepath.SkipDir
 			}
-			// save key as dir:file
-			key := fmt.Sprintf("%s:%s", dirName, entry.Name())
+			return nil
+		}
 
-			// FIXME: uploading different folders that happen to have the same
-			// name, results in overriding it content
-			// exmple: "-u test/test.txt" and "-u  test/sub-test/test.txt"
-			err = vlkClient.Set(cntx, key, fileContent, 0).Err()
-			if err != nil {
-				fmt.Printf("can't upload file %s , %v\n", entry.Name(), err)
-			} else {
-				fmt.Printf("done uploading : %s\n", entry.Name())
+		key := strings.ReplaceAll(path, string(os.PathSeparator), "/")
+
+		fileContent, err := os.ReadFile(path)
+		if err != nil {
+			fmt.Printf(" can't read %s \n %v\n", path, err)
+			return nil
+		}
+		err = vlkClient.Set(cntx, key, fileContent, 0).Err()
+		if err != nil {
+			fmt.Printf("\ncan't upload %s \n", err)
+		} else {
+			fmt.Printf("\ndone uploading : %s\n", key)
+		}
+		return nil
+	}
+	if isRecursive {
+		filepath.WalkDir(fullPath, processFile)
+	} else {
+		dirContents, _ := os.ReadDir(fullPath)
+		for _, subDir := range dirContents {
+			if !subDir.IsDir() {
+				dirPath := filepath.Join(fullPath, subDir.Name())
+				processFile(dirPath, subDir, nil)
 			}
-
 		}
 	}
 }
 
-func downloadDir(vlkClient *redis.Client, valkeyDir string, destinationDir string) {
+func downloadDir(
+	vlkClient *redis.Client,
+	valkeyDir string,
+	destinationDir string,
+	isRecursive bool,
+) {
 	// search the database
 	pattern := valkeyDir + ":*"
 	var cursor uint64
